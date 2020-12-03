@@ -83,6 +83,32 @@ end
 local yaml = require("tinyyaml")
 local template = require("resty.template")
 
+--[[
+    nginx.conf模板
+    模板说明：
+        {* 变量 *}
+        {% 逻辑模板，写lua语句 %}
+    stream处理流程
+        init阶段：apisix.stream_init()
+        init_worker阶段：apisix.stream_init_worker()
+        preread阶段：apisix.stream_preread_phase()
+        balancer阶段：apisix.stream_balancer_phase()
+        log阶段：apisix.stream_log_phase()
+    业务http处理流程
+        init阶段：apisix.http_init
+        init_worker阶段：apisix.http_init_worker()
+        ssl阶段：apisix.http_ssl_phase()
+        access阶段：apisix.http_access_phase()
+        balancer阶段：apisix.http_balancer_phase()
+        header filter阶段：apisix.http_header_filter_phase()
+        body fileter阶段：apisix.http_body_filter_phase()
+        log阶段：apisix.http_log_phase()
+    admin http处理流程
+        init阶段：apisix.http_init
+        init_worker阶段：apisix.http_init_worker()
+        content阶段：apisix.http_admin()
+    grpc：todo
+]]--
 local ngx_tpl = [=[
 # Configuration File - Nginx Server Configs
 # This is a read-only file, do not try to modify it.
@@ -622,6 +648,10 @@ local function merge_conf(base, new_tab)
 end
 
 
+--[[
+    获取配置，默认配置+用户自定义配置合并，
+    config.yaml中可以覆盖config-default.yaml中的内容
+]]--
 local function read_yaml_conf()
     local profile = require("apisix.core.profile")
     profile.apisix_home = apisix_home .. "/"
@@ -815,6 +845,7 @@ end
 
 
 local checked_admin_key = false
+-- 读取yaml配置，根据模板渲染nginx.conf，写入文件
 local function init()
     if is_root_path then
         print('Warning! Running apisix under /root is only suitable for development environments'
@@ -928,6 +959,8 @@ Please modify "admin_key" in conf/config.yaml .
         sys_conf["worker_rlimit_core"] = "16G"
     end
 
+    -- yaml中的配置合并到sys_conf中
+    -- 隐含了apisix和nginx_config中key不能相同，会被覆盖
     for k,v in pairs(yaml_conf.apisix) do
         sys_conf[k] = v
     end
@@ -966,7 +999,9 @@ Please modify "admin_key" in conf/config.yaml .
         sys_conf["dns_resolver"] = dns_addrs
     end
 
+    -- 加载模板
     local conf_render = template.compile(ngx_tpl)
+    -- 渲染为nginx conf内容
     local ngxconf = conf_render(sys_conf)
 
     local ok, err = write_file(apisix_home .. "/conf/nginx.conf", ngxconf)
