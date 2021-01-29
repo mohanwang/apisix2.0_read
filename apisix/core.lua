@@ -38,6 +38,7 @@ return {
     request  = require("apisix.core.request"),
     response = require("apisix.core.response"),
     lrucache = require("apisix.core.lrucache"),
+    -- 路径不统一
     schema   = require("apisix.schema_def"),
     string   = require("apisix.core.string"),
     ctx      = require("apisix.core.ctx"),

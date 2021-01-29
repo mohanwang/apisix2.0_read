@@ -67,6 +67,8 @@ function _M.http_init(args)
     parse_args(args)
     core.id.init()
 
+    -- 特权进程
+    -- https://github.com/openresty/lua-resty-core/blob/master/lib/ngx/process.md#enable_privileged_agent
     local process = require("ngx.process")
     local ok, err = process.enable_privileged_agent()
     if not ok then
@@ -85,22 +87,31 @@ function _M.http_init_worker()
     -- for testing only
     core.log.info("random test in [1, 10000]: ", math.random(1, 1000000))
 
+    -- 进程间同步事件,还没看到用的地方todo
+    -- 参考：https://github.com/Kong/lua-resty-worker-events
     local we = require("resty.worker.events")
     local ok, err = we.configure({shm = "worker-events", interval = 0.1})
     if not ok then
         error("failed to init worker event: " .. err)
     end
+    -- 只有配置discovery时才用到，目前只支持Eureka
     local discovery = require("apisix.discovery.init").discovery
     if discovery and discovery.init_worker then
         discovery.init_worker()
     end
+    -- balancer init and run
     require("apisix.balancer").init_worker()
     load_balancer = require("apisix.balancer").run
+    -- admin 
     require("apisix.admin.init").init_worker()
 
+    -- 路由发现初始化，支持uri匹配、 host+uri匹配两种
     router.http_init_worker()
+    -- service
     require("apisix.http.service").init_worker()
+    -- plugin
     plugin.init_worker()
+    -- consumer
     require("apisix.consumer").init_worker()
 
     if core.config == require("apisix.core.config_yaml") then
@@ -108,6 +119,7 @@ function _M.http_init_worker()
     end
 
     require("apisix.debug").init_worker()
+    -- upstream
     require("apisix.upstream").init_worker()
 
     local_conf = core.config.local_conf()
@@ -345,6 +357,7 @@ function _M.http_access_phase()
             api_ctx.conf_id = global_rule.value.id
 
             core.table.clear(plugins)
+            -- 插件filter
             api_ctx.plugins = plugin.filter(global_rule, plugins)
             run_plugin("rewrite", plugins, api_ctx)
             run_plugin("access", plugins, api_ctx)
@@ -368,6 +381,7 @@ function _M.http_access_phase()
         end
     end
 
+    -- 路由匹配
     local user_defined_route_matched = router.router_http.match(api_ctx)
     if not user_defined_route_matched then
         router.api.match(api_ctx)
@@ -395,6 +409,7 @@ function _M.http_access_phase()
             return core.response.exit(404)
         end
 
+        -- 插件
         route = plugin.merge_service_route(service, route)
         api_ctx.matched_route = route
         api_ctx.conf_type = "route&service"

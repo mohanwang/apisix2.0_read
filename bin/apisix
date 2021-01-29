@@ -86,6 +86,7 @@ local template = require("resty.template")
 --[[
     nginx.conf模板
     模板说明：
+        语法：https://github.com/bungle/lua-resty-template#template-syntax
         {* 变量 *}
         {% 逻辑模板，写lua语句 %}
     stream处理流程
@@ -1023,6 +1024,7 @@ Please modify "admin_key" in conf/config.yaml .
 end
 _M.init = init
 
+-- 初始化etcd
 local function init_etcd(show_output)
     -- read_yaml_conf
     local yaml_conf, err = read_yaml_conf()
@@ -1128,6 +1130,7 @@ _M.init_etcd = init_etcd
 local openresty_args = [[openresty  -p ]] .. apisix_home .. [[ -c ]]
                        .. apisix_home .. [[/conf/nginx.conf]]
 
+-- 启动openresty
 function _M.start(...)
 
     local cmd_logs = "mkdir -p " ..  apisix_home .. "/logs"

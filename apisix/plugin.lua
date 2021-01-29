@@ -102,6 +102,7 @@ local function load()
     core.table.clear(local_plugins)
     core.table.clear(local_plugins_hash)
 
+    -- question: repeat?
     local_conf = core.config.local_conf(true)
     local plugin_names = local_conf.plugins
     if not plugin_names then
@@ -179,6 +180,7 @@ end
 
 
 function _M.load()
+    -- 获取配置
     local_conf = core.config.local_conf(true)
 
     if ngx.config.subsystem == "http" then

@@ -111,6 +111,7 @@ local function merge_conf(base, new_tab, ppath)
 end
 
 
+-- 读取默认配置+自定义配置，合并后返回
 function _M.local_conf(force)
     if not force and config_data then
         return config_data

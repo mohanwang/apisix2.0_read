@@ -8,3 +8,5 @@
 - kubernetes k8s部署相关的yaml文件
 - logos 
 - rockspec luarocks包管理工具的配置文件（todo）
+- t 测试用例
+- util 一些工具，代码检查，插件检查，版本检查
